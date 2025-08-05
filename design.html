@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Thread Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .dashboard-container {
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: white;
+        }
+
+        .search-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .search-bar {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: white;
+            width: 300px;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-bar::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .filter-btn {
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            color: white;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 212, 255, 0.3);
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            height: calc(100vh - 140px);
+        }
+
+        .thread-visualization {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .thread-title {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+            color: #00d4ff;
+        }
+
+        .thread-flow {
+            position: relative;
+            height: 400px;
+            overflow: hidden;
+        }
+
+        .thread-line {
+            position: absolute;
+            top: 50%;
+            left: 5%;
+            right: 5%;
+            height: 4px;
+            background: linear-gradient(90deg, #00d4ff, #0099cc, #00d4ff);
+            border-radius: 2px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        .thread-nodes {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 100%;
+            position: relative;
+            z-index: 2;
+        }
+
+        .node {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .node:hover {
+            transform: scale(1.1);
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.4);
+        }
+
+        .node.active {
+            animation: glow 2s infinite;
+            border-color: #00ff88;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 136, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(0, 255, 136, 0.8); }
+        }
+
+        .node-icon {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .node-label {
+            font-size: 10px;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .data-connections {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+
+        .connection-line {
+            position: absolute;
+            background: rgba(0, 212, 255, 0.3);
+            transform-origin: left center;
+            transition: all 0.5s ease;
+        }
+
+        .side-panels {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .panel-title {
+            color: #00d4ff;
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .model-viewer {
+            height: 200px;
+            background: linear-gradient(45deg, #1a2332, #2a3442);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .model-3d {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            border-radius: 10px;
+            position: relative;
+            transform: rotateX(20deg) rotateY(20deg);
+            animation: rotate3d 4s infinite linear;
+            box-shadow: 0 10px 30px rgba(0, 212, 255, 0.3);
+        }
+
+        @keyframes rotate3d {
+            0% { transform: rotateX(20deg) rotateY(0deg); }
+            100% { transform: rotateX(20deg) rotateY(360deg); }
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .metric-card {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff88;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .chart-container {
+            height: 120px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin: 15px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chart-bars {
+            display: flex;
+            align-items: end;
+            height: 100%;
+            padding: 10px;
+            gap: 5px;
+        }
+
+        .chart-bar {
+            flex: 1;
+            background: linear-gradient(to top, #0099cc, #00d4ff);
+            border-radius: 2px 2px 0 0;
+            height: var(--bar-height);
+            animation: growBar 1s ease-out;
+        }
+
+        @keyframes growBar {
+            from { height: 0; }
+            to { height: var(--bar-height); }
+        }
+
+        .documents-list {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .document-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .document-item:hover {
+            background: rgba(0, 212, 255, 0.1);
+            transform: translateX(5px);
+        }
+
+        .doc-icon {
+            width: 24px;
+            height: 24px;
+            background: #00d4ff;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .status-indicators {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.online { background: #00ff88; }
+        .status-dot.warning { background: #ffaa00; }
+        .status-dot.error { background: #ff4444; }
+
+        .control-panel {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 25px;
+            padding: 15px 30px;
+            display: flex;
+            gap: 20px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .control-btn {
+            background: none;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .control-btn:hover {
+            background: rgba(0, 212, 255, 0.2);
+            border-color: #00d4ff;
+        }
+
+        .control-btn.active {
+            background: linear-gradient(45deg, #00d4ff, #0099cc);
+            border-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <header class="header">
+            <div class="logo-section">
+                <div class="logo">DT</div>
+                <h1>Digital Thread Dashboard</h1>
+            </div>
+            <div class="search-controls">
+                <input type="text" class="search-bar" placeholder="Search Product ID: PT-2024-001" >
+                <button class="filter-btn">🔍 Filter</button>
+                <button class="filter-btn">⚙️ Settings</button>
+            </div>
+            <div class="status-indicators">
+                <div class="status-dot online" title="System Online"></div>
+                <div class="status-dot warning" title="Maintenance Due"></div>
+                <div class="status-dot error" title="Quality Alert"></div>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <div class="thread-visualization">
+                <h2 class="thread-title">Product Lifecycle Digital Thread</h2>
+                <div class="thread-flow">
+                    <div class="thread-line"></div>
+                    <div class="thread-nodes">
+                        <div class="node active" data-stage="design">
+                            <div class="node-icon">📐</div>
+                            <div class="node-label">Design</div>
+                        </div>
+                        <div class="node" data-stage="engineering">
+                            <div class="node-icon">⚙️</div>
+                            <div class="node-label">Engineering</div>
+                        </div>
+                        <div class="node active" data-stage="manufacturing">
+                            <div class="node-icon">🏭</div>
+                            <div class="node-label">Manufacturing</div>
+                        </div>
+                        <div class="node" data-stage="quality">
+                            <div class="node-icon">✅</div>
+                            <div class="node-label">Quality</div>
+                        </div>
+                        <div class="node" data-stage="supply">
+                            <div class="node-icon">📦</div>
+                            <div class="node-label">Supply Chain</div>
+                        </div>
+                        <div class="node" data-stage="service">
+                            <div class="node-icon">🔧</div>
+                            <div class="node-label">Service</div>
+                        </div>
+                        <div class="node" data-stage="feedback">
+                            <div class="node-icon">💬</div>
+                            <div class="node-label">Feedback</div>
+                        </div>
+                    </div>
+                    <div class="data-connections" id="connections"></div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value">98.5%</div>
+                        <div class="metric-label">Overall Efficiency</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">42</div>
+                        <div class="metric-label">Active Processes</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">15.2s</div>
+                        <div class="metric-label">Avg Response Time</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">3</div>
+                        <div class="metric-label">Critical Alerts</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="side-panels">
+                <div class="panel">
+                    <h3 class="panel-title">🎯 3D Model Viewer</h3>
+                    <div class="model-viewer">
+                        <div class="model-3d"></div>
+                    </div>
+                    <p style="font-size: 12px; color: rgba(255,255,255,0.7); text-align: center; margin-top: 10px;">
+                        Interactive 3D Model - Click to rotate
+                    </p>
+                </div>
+
+                <div class="panel">
+                    <h3 class="panel-title">📊 Production Analytics</h3>
+                    <div class="chart-container">
+                        <div class="chart-bars">
+                            <div class="chart-bar" style="--bar-height: 60%;"></div>
+                            <div class="chart-bar" style="--bar-height: 80%;"></div>
+                            <div class="chart-bar" style="--bar-height: 45%;"></div>
+                            <div class="chart-bar" style="--bar-height: 90%;"></div>
+                            <div class="chart-bar" style="--bar-height: 75%;"></div>
+                            <div class="chart-bar" style="--bar-height: 95%;"></div>
+                            <div class="chart-bar" style="--bar-height: 55%;"></div>
+                        </div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">1,247</div>
+                        <div class="metric-label">Units Produced Today</div>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h3 class="panel-title">📋 Related Documents</h3>
+                    <div class="documents-list">
+                        <div class="document-item">
+                            <div class="doc-icon">📄</div>
+                            <div>
+                                <div style="font-weight: bold;">Design Specifications</div>
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.6);">Updated 2 hours ago</div>
+                            </div>
+                        </div>
+                        <div class="document-item">
+                            <div class="doc-icon">📊</div>
+                            <div>
+                                <div style="font-weight: bold;">Quality Report</div>
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.6);">Generated today</div>
+                            </div>
+                        </div>
+                        <div class="document-item">
+                            <div class="doc-icon">🔧</div>
+                            <div>
+                                <div style="font-weight: bold;">Service Manual</div>
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.6);">Version 3.2</div>
+                            </div>
+                        </div>
+                        <div class="document-item">
+                            <div class="doc-icon">📦</div>
+                            <div>
+                                <div style="font-weight: bold;">Supply Chain Data</div>
+                                <div style="font-size: 11px; color: rgba(255,255,255,0.6);">Live feed</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <div class="control-panel">
+            <button class="control-btn active">🔍 Zoom</button>
+            <button class="control-btn">🎯 Focus</button>
+            <button class="control-btn">📊 Analytics</button>
+            <button class="control-btn">⚡ Real-time</button>
+            <button class="control-btn">🔄 Refresh</button>
+        </div>
+    </div>
+
+    <script>
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const nodes = document.querySelectorAll('.node');
+            const connectionsContainer = document.getElementById('connections');
+            const controlBtns = document.querySelectorAll('.control-btn');
+            const model3D = document.querySelector('.model-3d');
+
+            
+            nodes.forEach(node => {
+                node.addEventListener('click', function() {
+                    
+                    nodes.forEach(n => n.classList.remove('active'));
+                    
+                    this.classList.add('active');
+                    
+                    
+                    updatePanelContent(this.dataset.stage);
+                    
+                    
+                    createConnections(this);
+                });
+
+                node.addEventListener('mouseenter', function() {
+                    createConnections(this);
+                });
+
+                node.addEventListener('mouseleave', function() {
+                    clearConnections();
+                });
+            });
+
+            
+            controlBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    controlBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            
+            model3D.addEventListener('click', function() {
+                this.style.animationPlayState = 
+                    this.style.animationPlayState === 'paused' ? 'running' : 'paused';
+            });
+
+            
+            const searchBar = document.querySelector('.search-bar');
+            searchBar.addEventListener('input', function() {
+                
+                console.log('Searching for:', this.value);
+            });
+
+            function createConnections(activeNode) {
+                clearConnections();
+                
+                const nodeRect = activeNode.getBoundingClientRect();
+                const containerRect = connectionsContainer.getBoundingClientRect();
+                
+                
+                for (let i = 0; i < 3; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'connection-line';
+                    line.style.width = '2px';
+                    line.style.height = Math.random() * 100 + 50 + 'px';
+                    line.style.left = (nodeRect.left - containerRect.left + 40) + 'px';
+                    line.style.top = Math.random() * 300 + 50 + 'px';
+                    line.style.transform = `rotate(${Math.random() * 60 - 30}deg)`;
+                    line.style.opacity = '0';
+                    
+                    connectionsContainer.appendChild(line);
+                    
+                    
+                    setTimeout(() => {
+                        line.style.opacity = '0.6';
+                        line.style.transition = 'all 0.5s ease';
+                    }, i * 100);
+                }
+            }
+
+            function clearConnections() {
+                connectionsContainer.innerHTML = '';
+            }
+
+            function updatePanelContent(stage) {
+                
+                const stageData = {
+                    design: { model: 'CAD Model v2.1', docs: 'Design Specs', metrics: '15 revisions' },
+                    engineering: { model: 'Analysis Model', docs: 'Engineering Reports', metrics: '98% validated' },
+                    manufacturing: { model: 'Production Model', docs: 'Work Instructions', metrics: '1,247 units' },
+                    quality: { model: 'Inspection Model', docs: 'QC Reports', metrics: '99.2% pass rate' },
+                    supply: { model: 'Logistics Model', docs: 'Supplier Data', metrics: '12 suppliers' },
+                    service: { model: 'Service Model', docs: 'Maintenance Logs', metrics: '94% uptime' },
+                    feedback: { model: 'Analytics Model', docs: 'Customer Reports', metrics: '4.8/5 rating' }
+                };
+
+                console.log('Updating content for stage:', stage, stageData[stage]);
+            }
+
+            
+            if (nodes.length > 0) {
+                createConnections(nodes[0]);
+            }
+
+            
+            setInterval(() => {
+                
+                const metrics = document.querySelectorAll('.metric-value');
+                metrics.forEach(metric => {
+                    if (Math.random() > 0.8) {
+                        metric.style.color = '#00ff88';
+                        setTimeout(() => {
+                            metric.style.color = '';
+                        }, 1000);
+                    }
+                });
+            }, 5000);
+        });
+    </script>
+</body>
+</html>
